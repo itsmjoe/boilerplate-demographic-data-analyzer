@@ -3,42 +3,50 @@ import pandas as pd
 
 def calculate_demographic_data(print_data=True):
     # Read data from file
-    df = None
-
-    # How many of each race are represented in this dataset? This should be a Pandas series with race names as the index labels.
-    race_count = None
-
-    # What is the average age of men?
-    average_age_men = None
-
-    # What is the percentage of people who have a Bachelor's degree?
-    percentage_bachelors = None
-
-    # What percentage of people with advanced education (`Bachelors`, `Masters`, or `Doctorate`) make more than 50K?
-    # What percentage of people without advanced education make more than 50K?
-
-    # with and without `Bachelors`, `Masters`, or `Doctorate`
-    higher_education = None
-    lower_education = None
-
-    # percentage with salary >50K
-    higher_education_rich = None
-    lower_education_rich = None
-
-    # What is the minimum number of hours a person works per week (hours-per-week feature)?
-    min_work_hours = None
-
-    # What percentage of the people who work the minimum number of hours per week have a salary of >50K?
-    num_min_workers = None
-
-    rich_percentage = None
-
-    # What country has the highest percentage of people that earn >50K?
-    highest_earning_country = None
-    highest_earning_country_percentage = None
-
-    # Identify the most popular occupation for those who earn >50K in India.
-    top_IN_occupation = None
+    df = pd.read_csv('adult.data.csv')
+  
+    race_count = df['race'].value_counts()
+  
+    average_age_men = df.loc[df['sex'] == 'Male', 'age'].mean().round(decimals=1)
+  
+    education_counts = df['education'].value_counts()
+    bachelors_count = education_counts.get('Bachelors', 0)
+    total_count = education_counts.sum()
+    percentage_bachelors = (bachelors_count / total_count * 100).round(decimals=1)
+  
+    salary_counts = df.groupby(df['education'])['salary'].value_counts()
+    high_salary_counts = salary_counts.loc[(slice(None), '>50K')]
+  
+    higher_education_counts = salary_counts.loc[['Bachelors', 'Masters', 'Doctorate']].sum()
+    lower_education_counts = salary_counts.sum() - higher_education_counts
+  
+    high_education_rich_count = high_salary_counts.loc[['Bachelors', 'Masters', 'Doctorate']].sum()
+    lower_education_rich_count = high_salary_counts.sum() - high_education_rich_count
+  
+    higher_education_rich = float((high_education_rich_count / higher_education_counts * 100).round(decimals=1))
+    lower_education_rich = float((lower_education_rich_count / lower_education_counts * 100).round(decimals=1))
+  
+    min_work_hours = df['hours-per-week'].min()
+  
+    hours_worked_salary_counts = df.groupby(df['hours-per-week'])['salary'].value_counts()
+    min_hours_worked_salary_counts = hours_worked_salary_counts.loc[min_work_hours, :]
+  
+    num_min_workers = min_hours_worked_salary_counts.sum()
+  
+    rich_percentage = float((min_hours_worked_salary_counts.get('>50K', 0) / num_min_workers * 100).round(decimals=1))
+  
+    country_counts = df.groupby(df['native-country'])['salary'].count()
+    country_rich_counts = df.groupby(df['native-country'])['salary'].apply(lambda x: (x == '>50K').sum())
+    country_counts_df = pd.DataFrame({'counts': country_counts, 'rich-counts': country_rich_counts})
+    country_counts_df['rich-percent'] = (country_counts_df['rich-counts'] / country_counts_df['counts'] * 100).round(decimals=1)
+    top_country = country_counts_df.sort_values('rich-percent', ascending=False).head(1)
+  
+    highest_earning_country = top_country.index[0]
+    highest_earning_country_percentage = top_country['rich-percent'].iloc[0]
+  
+    india_df = df.loc[(df['native-country'] == 'India') & (df['salary'] == '>50K')]
+    top_IN_occupation = india_df['occupation'].value_counts().idxmax()
+  
 
     # DO NOT MODIFY BELOW THIS LINE
 
